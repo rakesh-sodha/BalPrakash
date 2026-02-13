@@ -27,7 +27,7 @@ th { background: #f2f2f2; position: sticky; top: 0; }
 <table id="dataTable"></table>
 
 <script>
-fetch('data.csv')
+fetch(`data.csv?_=${Date.now()}`)
   .then(response => response.text())
   .then(csv => {
     const rows = csv.split('\n').map(r => r.split(','));
