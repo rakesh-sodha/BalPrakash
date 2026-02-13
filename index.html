@@ -3,58 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <title>Mandal-wise Data Viewer</title>
+
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-select { padding: 6px; margin-bottom: 10px; }
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-th { background: #f2f2f2; position: sticky; top: 0; }
+:root {
+  --primary: #2563eb;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --text: #1f2937;
+  --muted: #6b7280;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 24px;
+}
+
+.header {
+  background: var(--card);
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.download {
+  margin-left: auto;
+  background: var(--primary);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.download:hover {
+  opacity: 0.9;
+}
+
+.table-card {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+tbody tr:hover {
+  background: #eef2ff;
+}
+
+.footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 20px;
+}
 </style>
 </head>
+
 <body>
+<div class="container">
 
-<h2>Mandal-wise Data Viewer</h2>
+  <div class="header">
+    <h1>Mandal-wise Data Viewer</h1>
+    <div class="controls">
+      <label><strong>Mandal:</strong></label>
+      <select id="mandalSelect">
+        <option value="ALL">All</option>
+      </select>
 
-<label><strong>Select Mandal:</strong></label>
-<select id="mandalSelect">
-  <option value="ALL">All</option>
-</select>
+      <a class="download" href="data.csv" download>⬇ Download CSV</a>
+    </div>
+  </div>
 
-<br><br>
-<a href="data.csv" download>⬇ Download CSV</a>
+  <div class="table-card">
+    <table id="dataTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<br><br>
-<table id="dataTable"></table>
+  <div class="footer">
+    Read-only • Public • No login required
+  </div>
+
+</div>
 
 <script>
-fetch(`data.csv?_=${Date.now()}`)
-  .then(response => response.text())
+fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
+  .then(res => res.text())
   .then(csv => {
-    const rows = csv.split('\n').map(r => r.split(','));
+
+    const rows = csv.trim().split('\n').map(r => r.split('\t'));
     const headers = rows[0];
     const mandalIndex = headers.indexOf('Mandal');
 
-    const table = document.getElementById('dataTable');
+    const thead = document.querySelector('#dataTable thead');
+    const tbody = document.querySelector('#dataTable tbody');
     const select = document.getElementById('mandalSelect');
 
-    // Build header
-    let thead = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
-    table.innerHTML = thead;
+    // Header
+    thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
-    // Collect Mandals
-    const mandals = [...new Set(rows.slice(1).map(r => r[mandalIndex]).filter(Boolean))];
-    mandals.forEach(m => {
-      let opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m;
-      select.appendChild(opt);
-    });
+    // Mandal dropdown
+    [...new Set(rows.slice(1).map(r => r[mandalIndex]).filter(Boolean))]
+      .forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        select.appendChild(opt);
+      });
 
     function render(filter) {
-      table.innerHTML = thead;
+      tbody.innerHTML = '';
       rows.slice(1).forEach(r => {
         if (filter === 'ALL' || r[mandalIndex] === filter) {
-          table.innerHTML += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
+          tbody.innerHTML +=
+            '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
         }
       });
     }
