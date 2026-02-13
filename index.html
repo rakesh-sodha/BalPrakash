@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mandal-wise Data Viewer</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+select { padding: 6px; margin-bottom: 10px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+th { background: #f2f2f2; position: sticky; top: 0; }
+</style>
+</head>
+<body>
+
+<h2>Mandal-wise Data Viewer</h2>
+
+<label><strong>Select Mandal:</strong></label>
+<select id="mandalSelect">
+  <option value="ALL">All</option>
+</select>
+
+<br><br>
+<a href="data.csv" download>⬇ Download CSV</a>
+
+<br><br>
+<table id="dataTable"></table>
+
+<script>
+fetch('data.csv')
+  .then(response => response.text())
+  .then(csv => {
+    const rows = csv.split('\n').map(r => r.split(','));
+    const headers = rows[0];
+    const mandalIndex = headers.indexOf('Mandal');
+
+    const table = document.getElementById('dataTable');
+    const select = document.getElementById('mandalSelect');
+
+    // Build header
+    let thead = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    table.innerHTML = thead;
+
+    // Collect Mandals
+    const mandals = [...new Set(rows.slice(1).map(r => r[mandalIndex]).filter(Boolean))];
+    mandals.forEach(m => {
+      let opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    });
+
+    function render(filter) {
+      table.innerHTML = thead;
+      rows.slice(1).forEach(r => {
+        if (filter === 'ALL' || r[mandalIndex] === filter) {
+          table.innerHTML += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
+        }
+      });
+    }
+
+    render('ALL');
+    select.onchange = () => render(select.value);
+  });
+</script>
+
+</body>
+</html>
