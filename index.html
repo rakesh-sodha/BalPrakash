@@ -126,7 +126,7 @@ tbody tr:hover {
         <option value="ALL">All</option>
       </select>
 
-      <a class="download" href="data.csv" download>⬇ Download CSV</a>
+      <a class="download" id="downloadBtn" download>⬇ Download CSV</a>
     </div>
   </div>
 
@@ -144,23 +144,28 @@ tbody tr:hover {
 </div>
 
 <script>
+let allRows = [];
+let headers = [];
+let mandalIndex = -1;
+
 fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
   .then(res => res.text())
   .then(csv => {
 
-    const rows = csv.trim().split('\n').map(r => r.split('\t'));
-    const headers = rows[0];
-    const mandalIndex = headers.indexOf('Mandal');
+    allRows = csv.trim().split('\n').map(r => r.split('\t'));
+    headers = allRows[0];
+    mandalIndex = headers.indexOf('Mandal');
 
     const thead = document.querySelector('#dataTable thead');
     const tbody = document.querySelector('#dataTable tbody');
     const select = document.getElementById('mandalSelect');
+    const downloadBtn = document.getElementById('downloadBtn');
 
-    // Header
+    // Table header
     thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
     // Mandal dropdown
-    [...new Set(rows.slice(1).map(r => r[mandalIndex]).filter(Boolean))]
+    [...new Set(allRows.slice(1).map(r => r[mandalIndex]).filter(Boolean))]
       .forEach(m => {
         const opt = document.createElement('option');
         opt.value = m;
@@ -170,7 +175,7 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
 
     function render(filter) {
       tbody.innerHTML = '';
-      rows.slice(1).forEach(r => {
+      allRows.slice(1).forEach(r => {
         if (filter === 'ALL' || r[mandalIndex] === filter) {
           tbody.innerHTML +=
             '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
@@ -178,8 +183,40 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
       });
     }
 
+    function downloadFilteredCSV() {
+      const selected = select.value;
+
+      const filteredRows = [
+        headers,
+        ...allRows.slice(1).filter(r =>
+          selected === 'ALL' || r[mandalIndex] === selected
+        )
+      ];
+
+      const csvContent = filteredRows
+        .map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download =
+        selected === 'ALL'
+          ? 'all-data.csv'
+          : `mandal-${selected.replace(/\s+/g, '_')}.csv`;
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     render('ALL');
+
     select.onchange = () => render(select.value);
+    downloadBtn.onclick = downloadFilteredCSV;
   });
 </script>
 
