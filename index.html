@@ -148,12 +148,18 @@ let allRows = [];
 let headers = [];
 let mandalIndex = -1;
 
-fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
+fetch(`data.csv?_=${Date.now()}`)
   .then(res => res.text())
   .then(csv => {
 
-    // ✅ COMMA-separated parsing
-    allRows = csv.trim().split('\n').map(r => r.split(','));
+    // ✅ Normalize line endings and parse CSV
+    allRows = csv
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim()
+      .split('\n')
+      .map(r => r.split(',').map(c => c.trim()));
+
     headers = allRows[0];
     mandalIndex = headers.indexOf('Mandal');
 
@@ -166,19 +172,32 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
     thead.innerHTML =
       '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
-    // Mandal dropdown
-    [...new Set(allRows.slice(1).map(r => r[mandalIndex]).filter(Boolean))]
-      .forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        select.appendChild(opt);
-      });
+    // 🔽 Default dropdown option
+    select.innerHTML = '<option value="">Select Mandal</option>';
 
-    function render(filter) {
+    // Mandal dropdown (clean + unique)
+    [...new Set(
+      allRows.slice(1)
+        .map(r => r[mandalIndex])
+        .filter(Boolean)
+    )].forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    });
+
+    // 🚫 Do NOT render table initially
+    tbody.innerHTML = '';
+
+    function render() {
+      const selected = select.value;
       tbody.innerHTML = '';
+
+      if (!selected) return;
+
       allRows.slice(1).forEach(r => {
-        if (filter === 'ALL' || r[mandalIndex] === filter) {
+        if (r[mandalIndex] === selected) {
           tbody.innerHTML +=
             '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
         }
@@ -187,36 +206,38 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
 
     function downloadFilteredCSV() {
       const selected = select.value;
+      if (!selected) {
+        alert('Please select a Mandal first');
+        return;
+      }
 
       const filteredRows = [
         headers,
-        ...allRows.slice(1).filter(r =>
-          selected === 'ALL' || r[mandalIndex] === selected
-        )
+        ...allRows.slice(1).filter(r => r[mandalIndex] === selected)
       ];
 
+      // ✅ Proper CSV generation (no extra newlines)
       const csvContent = filteredRows
-        .map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(','))
+        .map(r =>
+          r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')
+        )
         .join('\n');
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      const blob = new Blob([csvContent], {
+        type: 'text/csv;charset=utf-8;'
+      });
 
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download =
-        selected === 'ALL'
-          ? 'all-data.csv'
-          : `mandal-${selected.replace(/\s+/g, '_')}.csv`;
-
+      a.download = `mandal-${selected.replace(/\s+/g, '_')}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
-    render('ALL');
-    select.onchange = () => render(select.value);
+    select.onchange = render;
     downloadBtn.onclick = downloadFilteredCSV;
   });
 </script>
