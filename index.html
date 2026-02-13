@@ -152,7 +152,8 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
   .then(res => res.text())
   .then(csv => {
 
-    allRows = csv.trim().split('\n').map(r => r.split('\t'));
+    // ✅ COMMA-separated parsing
+    allRows = csv.trim().split('\n').map(r => r.split(','));
     headers = allRows[0];
     mandalIndex = headers.indexOf('Mandal');
 
@@ -162,7 +163,8 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
     const downloadBtn = document.getElementById('downloadBtn');
 
     // Table header
-    thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    thead.innerHTML =
+      '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
     // Mandal dropdown
     [...new Set(allRows.slice(1).map(r => r[mandalIndex]).filter(Boolean))]
@@ -214,7 +216,6 @@ fetch(`data.csv?_=${Date.now()}`) // auto cache-busting
     }
 
     render('ALL');
-
     select.onchange = () => render(select.value);
     downloadBtn.onclick = downloadFilteredCSV;
   });
